@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>密立根油滴实验 - 分析平台 (完美离线版)</title>
+    <style>
+        /* ================= 1:1 提取 Tailwind 核心美学变量 ================= */
+        :root {
+            --slate-50: #f8fafc; --slate-100: #f1f5f9; --slate-200: #e2e8f0; --slate-300: #cbd5e1;
+            --slate-400: #94a3b8; --slate-500: #64748b; --slate-600: #475569; --slate-700: #334155;
+            --slate-800: #1e293b; --slate-900: #0f172a;
+            --blue-50: #eff6ff; --blue-100: #dbeafe; --blue-200: #bfdbfe; --blue-500: #3b82f6; 
+            --blue-600: #2563eb; --blue-700: #1d4ed8; --blue-800: #1e40af;
+            --green-50: #ecfdf5; --green-100: #d1fae5; --green-400: #34d399; --green-600: #059669; --green-700: #047857;
+            --red-50: #fef2f2; --red-500: #ef4444; --red-700: #b91c1c;
+            --indigo-50: #eef2ff; --indigo-100: #e0e7ff; --indigo-500: #6366f1; --indigo-700: #4338ca; --indigo-800: #3730a3;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        /* ================= 基础重置 ================= */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: var(--slate-50); color: var(--slate-800); line-height: 1.5; padding: 1.5rem; -webkit-font-smoothing: antialiased; }
+        .max-w-6xl { max-width: 72rem; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+        .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+        
+        /* ================= 容器与卡片排版 ================= */
+        .card { background-color: #fff; border-radius: 1rem; border: 1px solid var(--slate-200); padding: 1.5rem; box-shadow: var(--shadow-sm); }
+        .header-card { display: flex; flex-direction: column; gap: 1rem; justify-content: space-between; align-items: flex-start; }
+        @media (min-width: 768px) { .header-card { flex-direction: row; align-items: center; } }
+        
+        .flex-center { display: flex; align-items: center; }
+        .icon-box { background-color: var(--blue-600); padding: 0.75rem; border-radius: 0.75rem; box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.06); margin-right: 1rem; }
+        h1 { font-size: 1.5rem; font-weight: 700; color: var(--slate-900); letter-spacing: -0.025em; }
+        h2 { font-size: 1.125rem; font-weight: 700; border-bottom: 1px solid var(--slate-200); padding-bottom: 0.75rem; margin-bottom: 1rem; display: flex; align-items: center; }
+        h3 { font-size: 1.125rem; font-weight: 700; border-bottom: 1px solid var(--slate-200); padding-bottom: 0.75rem; margin-bottom: 1rem; display: flex; align-items: center; }
+        
+        /* ================= 按钮与表单 ================= */
+        .btn-primary { display: flex; align-items: center; padding: 0.75rem 1.5rem; background-color: var(--blue-600); color: #fff; font-size: 1rem; font-weight: 600; border-radius: 0.75rem; border: none; cursor: pointer; box-shadow: var(--shadow); transition: all 0.15s ease; }
+        .btn-primary:hover { background-color: var(--blue-700); }
+        .btn-primary:active { transform: scale(0.98); }
+        
+        input[type="number"] { width: 100%; border: 1px solid var(--slate-300); border-radius: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.875rem; outline: none; transition: all 0.2s; background: var(--slate-50); }
+        input[type="number"]:focus { border-color: var(--blue-500); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); background: #fff; }
+        input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+        
+        .grid-1-2 { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        @media (min-width: 1024px) { .grid-1-2 { grid-template-columns: 1fr 2fr; } }
+        .grid-2 { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        @media (min-width: 1280px) { .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        
+        /* ================= 选项卡 ================= */
+        .tabs-container { display: inline-flex; background-color: var(--slate-200); padding: 0.25rem; border-radius: 0.75rem; gap: 0.25rem; width: max-content;}
+        .tab-btn { display: flex; align-items: center; padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; border: none; background: transparent; color: var(--slate-600); cursor: pointer; transition: all 0.2s; }
+        .tab-btn.active { background-color: #fff; color: var(--blue-700); font-weight: 700; box-shadow: var(--shadow-sm); }
+        .tab-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .tab-content { display: none; animation: slideUp 0.3s ease-out forwards; }
+        .tab-content.active { display: grid; gap: 1.5rem; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ================= 左侧物理常数块 ================= */
+        .const-row { display: flex; justify-content: space-between; align-items: center; background-color: var(--slate-50); padding: 0.5rem 0.75rem; border-radius: 0.5rem; border: 1px solid var(--slate-200); margin-bottom: 0.5rem; transition: border-color 0.2s;}
+        .const-row:hover { border-color: var(--slate-300); }
+        .const-row label { font-size: 0.875rem; font-weight: 500; color: var(--slate-700); width: 55%; }
+        .const-row .input-box { width: 45%; display: flex; align-items: center; justify-content: flex-end;}
+        .const-row input { text-align: right; background: transparent; border: none; font-family: monospace; color: var(--blue-700); font-weight: 600; padding: 0; border-radius: 0;}
+        .const-row input:focus { box-shadow: none; border-bottom: 2px solid var(--blue-500); }
+        .const-row span { font-size: 0.75rem; color: var(--slate-400); margin-left: 0.5rem; min-width: 2.5rem; }
+
+        /* ================= 数据矩阵表格 ================= */
+        .table-wrap { overflow-x: auto; width: 100%; border-radius: 0.5rem; border: 1px solid var(--slate-200); }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem; }
+        thead th { background-color: var(--slate-50); color: var(--slate-600); font-weight: 600; padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--slate-200); border-right: 1px solid var(--slate-200); white-space: nowrap; text-align: center;}
+        tbody td { border-bottom: 1px solid var(--slate-200); border-right: 1px solid var(--slate-200); padding: 0; }
+        tbody tr:last-child td { border-bottom: none; }
+        tbody td:last-child, thead th:last-child { border-right: none; }
+        .td-pad { padding: 0.75rem 0.5rem; }
+        .cell-input { width: 100%; height: 100%; text-align: center; border: none; padding: 0.75rem; background: transparent; border-radius: 0; transition: background 0.2s;}
+        .cell-input:focus { outline: none; }
+        .focus-blue:focus { background-color: var(--blue-50); }
+        .focus-green:focus { background-color: var(--green-50); }
+        
+        /* ================= 结果总结卡片 ================= */
+        .alert-error { display: none; background-color: var(--red-50); border-left: 4px solid var(--red-500); padding: 1rem; border-radius: 0 0.75rem 0.75rem 0; align-items: center; }
+        .hero-banner { background: linear-gradient(135deg, var(--blue-700), var(--indigo-800)); border-radius: 1rem; padding: 2rem; color: #fff; box-shadow: var(--shadow-lg); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; }
+        .hero-banner .hero-val { background: rgba(0,0,0,0.2); padding: 1rem 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.1); margin-top: 1.25rem; font-family: monospace; font-size: 2.25rem; font-weight: 700; letter-spacing: -0.025em; display: inline-block;}
+        .hero-banner .err-box { background: rgba(255,255,255,0.1); backdrop-filter: blur(8px); padding: 1.25rem 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.2); text-align: center; }
+        .info-box { background-color: var(--blue-50); border-left: 4px solid var(--blue-500); padding: 1rem; border-radius: 0 0.75rem 0.75rem 0; color: var(--blue-800); font-size: 0.875rem; }
+
+        /* ================= Recharts 风格图表引擎 ================= */
+        .chart-wrap { width: 100%; height: 420px; position: relative; margin-top: 1rem;}
+        svg.chart { width: 100%; height: 100%; display: block; overflow: visible; }
+        .grid-line { stroke: var(--slate-200); stroke-dasharray: 4 4; }
+        .ref-line { stroke: var(--slate-900); stroke-dasharray: 4 4; opacity: 0.2; }
+        
+        .dot-group { cursor: pointer; }
+        .dot-group circle { transition: all 0.2s ease; }
+        .dot-group:hover circle.real-dot { r: 8; stroke: #fff; stroke-width: 2; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }
+        
+        /* 高级 Tooltip */
+        .tooltip { position: absolute; display: none; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(8px); border: 1px solid var(--slate-200); box-shadow: var(--shadow-xl); padding: 1rem; border-radius: 0.75rem; pointer-events: none; z-index: 50; transition: transform 0.05s ease-out; width: max-content; font-family: system-ui, sans-serif;}
+        .tooltip .tt-title { font-weight: 700; color: var(--slate-800); border-bottom: 1px solid var(--slate-200); padding-bottom: 0.5rem; margin-bottom: 0.75rem; font-size: 0.875rem;}
+        .tooltip .tt-row { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; margin-bottom: 0.35rem; }
+        .tooltip .tt-label { font-size: 0.8125rem; color: var(--slate-500); font-weight: 500;}
+        .tooltip .tt-val { font-family: monospace; font-size: 0.875rem; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="max-w-6xl">
+    <!-- 顶部页头 -->
+    <div class="card header-card">
+        <div class="flex-center">
+            <div class="icon-box">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v1"/><path d="M21 7H3"/><path d="M12 22a7 7 0 0 0 7-7V7H5v8a7 7 0 0 0 7 7z"/><path d="M12 22v-4"/><path d="M9 13h6"/></svg>
+            </div>
+            <div>
+                <h1>密立根油滴实验 - 分析平台</h1>
+                <p style="font-size: 0.875rem; color: var(--slate-500); margin-top: 0.25rem;">最小单元模型与误差传播严谨分析体系 (Pro 离线版)</p>
+            </div>
+        </div>
+        <button class="btn-primary" onclick="processData()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.5rem;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            一键验证与分析
+        </button>
+    </div>
+
+    <!-- 错误警告框 -->
+    <div id="errorAlert" class="alert-error">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--red-500)" stroke-width="2" style="margin-right: 0.75rem;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="errorMsg" style="color: var(--red-700); font-weight: 600;"></span>
+    </div>
+
+    <!-- 选项卡导航 -->
+    <div class="tabs-container">
+        <button class="tab-btn active" id="tabBtn-input" onclick="switchTab('input')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:0.5rem;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M10 12h4"/><path d="M10 16h4"/></svg>
+            1. 参数与数据阵列
+        </button>
+        <button class="tab-btn" id="tabBtn-process" onclick="switchTab('process')" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:0.5rem;"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/></svg>
+            2. 理论计算与完整表达
+        </button>
+        <button class="tab-btn" id="tabBtn-visual" onclick="switchTab('visual')" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:0.5rem;"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            3. 量子化视觉铁证
+        </button>
+    </div>
+
+    <!-- Tab 1: 数据输入 -->
+    <div id="tab-input" class="tab-content active grid-1-2">
+        <div class="card" style="height: fit-content;">
+            <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--slate-500)" stroke-width="2" style="margin-right:0.5rem;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> 物理环境常数配置</h2>
+            
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                <div style="flex:1;">
+                    <label style="font-size:0.75rem; font-weight:600; color:var(--slate-500); margin-bottom:0.35rem; display:block;">提取油滴数</label>
+                    <input type="number" id="cfg_numDrops" value="5" min="1" max="15" onchange="updateConfig('numDrops', this.value)">
+                </div>
+                <div style="flex:1;">
+                    <label style="font-size:0.75rem; font-weight:600; color:var(--slate-500); margin-bottom:0.35rem; display:block;">测量次数 / 滴</label>
+                    <input type="number" id="cfg_numTrials" value="5" min="1" max="15" onchange="updateConfig('numTrials', this.value)">
+                </div>
+            </div>
+            <div id="constantsContainer"></div>
+        </div>
+
+        <div class="card">
+            <h2 style="border:none; margin-bottom: 0.25rem;">实验测量数据矩阵</h2>
+            <p style="font-size: 0.875rem; color: var(--slate-500); margin-bottom: 1.25rem;">提示：所有油滴数据已载入预设实验记录，您可直接一键验证，或修改为您的实际测试数据。</p>
+            <div class="table-wrap">
+                <table id="dataTable">
+                    <thead id="dataThead"></thead>
+                    <tbody id="dataTbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 2: 计算过程与结果 -->
+    <div id="tab-process" class="tab-content">
+        <div class="hero-banner">
+            <div>
+                <div style="display:flex; align-items:center; color: var(--blue-200); font-weight:600; font-size:1.125rem;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--green-400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:0.5rem;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    基本电荷量完整表达 (最佳估计值与总不确定度)
+                </div>
+                <div class="hero-val">
+                    <span style="color:var(--blue-200); font-size:1.5rem;">e = </span>
+                    <span id="res_e_full">( 0.000 ± 0.000 )</span>
+                    <span style="color:var(--blue-200); font-size:1.5rem; margin-left:0.75rem;">× 10⁻¹⁹ C</span>
+                </div>
+            </div>
+            <div class="err-box">
+                <p style="font-size: 0.875rem; color: var(--blue-200); margin-bottom: 0.25rem;">测定值与理论值相对误差</p>
+                <div style="font-size: 2.5rem; font-weight: 800; color: #fff;" id="res_error">0.00<span style="font-size:1.5rem;">%</span></div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <strong style="display:block; margin-bottom:0.25rem; font-weight:700;">📖 最小单元模型算法说明：</strong>
+            依据宏观动力学推导求得绝对电荷量 <span class="font-mono" style="background:#dbeafe; padding:2px 4px; border-radius:4px;">qᵢ</span> 后，通过寻找其最大公约数（即 <span class="font-mono" style="background:#dbeafe; padding:2px 4px; border-radius:4px;">n = round(qᵢ / e₀)</span>）提取出离散的整数电子数。反求单次实验的基本电荷 <span class="font-mono" style="background:#dbeafe; padding:2px 4px; border-radius:4px;">eᵢ = qᵢ / n</span>，最终结果 <span class="font-mono" style="background:#dbeafe; padding:2px 4px; border-radius:4px;">e</span> 取各次测量值 <span class="font-mono" style="background:#dbeafe; padding:2px 4px; border-radius:4px;">eᵢ</span> 的算术平均，完全契合误差传播理论推导范式。
+        </div>
+
+        <div class="grid-2">
+            <div class="card" style="padding: 0;">
+                <h3 style="padding: 1.5rem 1.5rem 0.75rem 1.5rem; margin:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue-500)" stroke-width="2" style="margin-right:0.5rem;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>基础推导与绝对电荷提取</h3>
+                <div class="table-wrap" style="border:none; border-radius:0 0 1rem 1rem;">
+                    <table id="table_physical"></table>
+                </div>
+            </div>
+            <div class="card" style="padding: 0;">
+                <h3 style="padding: 1.5rem 1.5rem 0.75rem 1.5rem; margin:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--indigo-500)" stroke-width="2" style="margin-right:0.5rem;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>最小单元 eᵢ 测定与不确定度追踪</h3>
+                <div class="table-wrap" style="border:none; border-radius:0 0 1rem 1rem;">
+                    <table id="table_uncertainty"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 3: 可视化铁证 -->
+    <div id="tab-visual" class="tab-content">
+        <div class="card">
+            <h2 style="border:none; margin-bottom:0.25rem;">电荷量子化的视觉铁证 (全阶梯对齐)</h2>
+            <p style="font-size: 0.875rem; color: var(--slate-500); margin-bottom: 0.5rem;">Y 轴为实验获取的宏观绝对电荷量。横向参考线严格以理论单元 <span class="font-mono">e₀</span> 的整数倍描绘。所有的离散电荷完美卡在了基本电荷的整数倍阶梯上。</p>
+            <div class="chart-wrap" id="chart_stairs" onmouseleave="hideTooltip()"></div>
+        </div>
+
+        <div class="card">
+            <h2 style="border:none; margin-bottom:0.25rem;">测量电荷 q 与电子数 n 的宏观线性关系</h2>
+            <p style="font-size: 0.875rem; color: var(--slate-500); margin-bottom: 0.5rem;">拟合直线的理论斜率即代表最终基本电荷量大小（即最佳拟合的 e 值）。</p>
+            <div class="chart-wrap" id="chart_line" onmouseleave="hideTooltip()"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 绝对定位的 Tooltip 容器 (彻底解决引号被截断Bug) -->
+<div id="tooltip" class="tooltip"></div>
+
+<script>
+/** * ===================================================================
+ * Vanilla JS Core Engine (No React, No Recharts, No Tailwind)
+ * 利用 ViewBox 技术和基于 Array 的 Tooltip 数据绑定，彻底解决显示错位和崩溃问题
+ * ===================================================================
+ */
+
+const constants = {
+    rho: 981, g: 9.794, l: 1.5e-3, d: 5.0e-3, eta: 1.83e-5, b: 6.17e-6, p: 76.0, delta_U: 1, delta_t: 0.01, e_theo: 1.602e-19 
+};
+let config = { numDrops: 5, numTrials: 5 };
+let dataMatrix = [
+    { U: [170, 171, 169, 170, 172], t: [12.21, 12.22, 12.28, 12.12, 12.31] }, 
+    { U: [100, 98, 102, 100, 104], t: [14.26, 14.24, 14.26, 14.26, 14.24] },
+    { U: [247, 249, 248, 247, 244], t: [9.28, 9.30, 9.28, 9.26, 9.28] },
+    { U: [121, 121, 121, 122, 121], t: [8.74, 8.72, 8.74, 8.74, 8.74] },
+    { U: [234, 234, 232, 230, 234], t: [6.88, 6.86, 7.00, 6.96, 6.89] }
+];
+let globalResults = null;
+let tooltipCache = []; // 用于安全存储 HTML，防止 SVG 拼接时引号断裂
+
+// --- 工具函数：科学计数法排版 ---
+const toSuperscript = (str) => {
+    const map = { '-': '⁻', '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' };
+    return str.toString().split('').map(c => map[c] || c).join('');
+};
+const formatSci = (num, fractionDigits = 3) => {
+    if (num === 0) return '0';
+    if (!num || isNaN(num)) return '-';
+    const [base, exp] = num.toExponential(fractionDigits).split('e');
+    return `${base} × 10${toSuperscript(exp.replace('+', ''))}`;
+};
+
+// --- 界面初始化 ---
+function initUI() {
+    const container = document.getElementById('constantsContainer');
+    const constDefs = [
+        { key: 'eta', label: '空气粘滞系数 η', unit: 'Pa·s' }, { key: 'rho', label: '油滴密度 ρ', unit: 'kg/m³' },
+        { key: 'g', label: '重力加速度 g', unit: 'm/s²' }, { key: 'b', label: '坎宁安常数 b', unit: 'm·cmHg' },
+        { key: 'p', label: '大气压强 p', unit: 'cmHg' }, { key: 'e_theo', label: '理论基本电荷 e₀', unit: 'C' }
+    ];
+    const errDefs = [
+        { key: 'delta_U', label: '平衡电压误差 ΔU', unit: 'V' }, { key: 'delta_t', label: '下落计时误差 Δt', unit: 's' }
+    ];
+
+    let html = '';
+    const renderRow = (def) => `
+        <div class="const-row">
+            <label>${def.label}</label>
+            <div class="input-box">
+                <input type="number" step="any" value="${constants[def.key]}" onchange="constants['${def.key}'] = parseFloat(this.value)">
+                <span>${def.unit}</span>
+            </div>
+        </div>`;
+    
+    constDefs.forEach(def => html += renderRow(def));
+    html += `<div style="border-top: 1px solid var(--slate-200); margin-top: 1rem; padding-top: 0.75rem;">
+             <p style="font-size: 0.75rem; color: var(--slate-400); font-weight: 700; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em;">仪器 B 类不确定度源</p>`;
+    errDefs.forEach(def => html += renderRow(def));
+    html += `</div>`;
+    container.innerHTML = html;
+    
+    renderDataTable();
+}
+
+function renderDataTable() {
+    const thead = document.getElementById('dataThead');
+    const tbody = document.getElementById('dataTbody');
+    
+    let theadHtml = `<tr><th style="width: 80px;">标号</th><th style="width: 80px;">变量</th>`;
+    for(let i=0; i<config.numTrials; i++) {
+        theadHtml += `<th>次序 ${i+1}</th>`;
+    }
+    theadHtml += `</tr>`;
+    thead.innerHTML = theadHtml;
+
+    let tbodyHtml = '';
+    for(let i=0; i<config.numDrops; i++) {
+        const drop = dataMatrix[i];
+        tbodyHtml += `<tr>
+            <td rowspan="2" class="td-pad" style="text-align:center; font-weight:600; background:var(--slate-50); color:var(--slate-700);">第 ${i+1} 滴</td>
+            <td class="td-pad" style="text-align:center; font-weight:600; background:var(--blue-50); color:var(--blue-700);">U (V)</td>`;
+        for(let j=0; j<config.numTrials; j++) {
+            tbodyHtml += `<td><input class="cell-input focus-blue" type="number" value="${drop.U[j]}" onchange="dataMatrix[${i}].U[${j}] = this.value"></td>`;
+        }
+        tbodyHtml += `</tr><tr>
+            <td class="td-pad" style="text-align:center; font-weight:600; background:var(--green-50); color:var(--green-700);">t_g (s)</td>`;
+        for(let j=0; j<config.numTrials; j++) {
+            tbodyHtml += `<td><input class="cell-input focus-green" type="number" value="${drop.t[j]}" onchange="dataMatrix[${i}].t[${j}] = this.value"></td>`;
+        }
+        tbodyHtml += `</tr>`;
+    }
+    tbody.innerHTML = tbodyHtml;
+}
+
+function updateConfig(key, val) {
+    let num = parseInt(val, 10);
+    if (isNaN(num) || num < 1) num = 1;
+    if (num > 15) num = 15;
+    config[key] = num;
+
+    if (key === 'numDrops') {
+        while(dataMatrix.length < num) dataMatrix.push({ U: Array(config.numTrials).fill(''), t: Array(config.numTrials).fill('') });
+        dataMatrix.length = num;
+    } else {
+        dataMatrix.forEach(drop => {
+            while(drop.U.length < num) { drop.U.push(''); drop.t.push(''); }
+            drop.U.length = num; drop.t.length = num;
+        });
+    }
+    renderDataTable();
+}
+
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(`tab-${tabId}`).classList.add('active');
+    document.getElementById(`tabBtn-${tabId}`).classList.add('active');
+}
+
+// --- 物理计算核心逻辑 ---
+function processData() {
+    const alertBox = document.getElementById('errorAlert');
+    alertBox.style.display = 'none';
+
+    let parsedData = [];
+    for (let i = 0; i < config.numDrops; i++) {
+        const U_vals = dataMatrix[i].U.map(v => parseFloat(v));
+        const t_vals = dataMatrix[i].t.map(v => parseFloat(v));
+
+        if (U_vals.some(isNaN) || t_vals.some(isNaN)) {
+            document.getElementById('errorMsg').innerText = `第 ${i + 1} 颗油滴的数据不完整！请检查空白输入框。`;
+            alertBox.style.display = 'flex'; return;
+        }
+        if (U_vals.some(v => v <= 0) || t_vals.some(v => v <= 0)) {
+            document.getElementById('errorMsg').innerText = `第 ${i + 1} 颗油滴的电压或时间必须大于 0！`;
+            alertBox.style.display = 'flex'; return;
+        }
+        parsedData.push({ U: U_vals, t: t_vals });
+    }
+
+    const res = parsedData.map((drop, idx) => {
+        const { rho, g, l, d, eta, b, p, delta_U, delta_t, e_theo } = constants;
+        const numT = config.numTrials;
+
+        const U_avg = drop.U.reduce((a, b) => a + b, 0) / numT;
+        const t_avg = drop.t.reduce((a, b) => a + b, 0) / numT;
+        const U_sd = Math.sqrt(drop.U.reduce((acc, val) => acc + Math.pow(val - U_avg, 2), 0) / (numT - 1) || 0);
+        const t_sd = Math.sqrt(drop.t.reduce((acc, val) => acc + Math.pow(val - t_avg, 2), 0) / (numT - 1) || 0);
+
+        const uA_U = U_sd / Math.sqrt(numT), uB_U = delta_U / Math.sqrt(3), uc_U = Math.sqrt(uA_U**2 + uB_U**2);
+        const uA_t = t_sd / Math.sqrt(numT), uB_t = delta_t / Math.sqrt(3), uc_t = Math.sqrt(uA_t**2 + uB_t**2);
+
+        const v_g = l / t_avg;
+        const a = Math.sqrt((9 * eta * v_g) / (2 * rho * g));
+        const correction = 1 + b / (p * a);
+        const q_raw = (18 * Math.PI / Math.sqrt(2 * rho * g)) * Math.pow((eta * l) / (t_avg * correction), 1.5) * (d / U_avg);
+        
+        const n = Math.round(q_raw / e_theo);
+        const e_measured = q_raw / n;
+
+        const rel_u_U = uc_U / U_avg, rel_u_t = (1.5 * uc_t) / t_avg;
+        const uc_e = e_measured * Math.sqrt(rel_u_U**2 + rel_u_t**2);
+
+        return { id: idx + 1, U_avg, t_avg, uc_U, uc_t, a, q_raw, n, e_measured, uc_e };
+    });
+
+    const e_avg = res.reduce((acc, curr) => acc + curr.e_measured, 0) / config.numDrops;
+    const final_uc_e = (1 / config.numDrops) * Math.sqrt(res.reduce((acc, curr) => acc + curr.uc_e**2, 0));
+    const percentage_error = (Math.abs(e_avg - constants.e_theo) / constants.e_theo) * 100;
+
+    globalResults = { drops: res, e_avg, final_uc_e, percentage_error };
+    
+    document.getElementById('tabBtn-process').disabled = false;
+    document.getElementById('tabBtn-visual').disabled = false;
+
+    renderResults();
+    switchTab('process');
+    drawCharts(); 
+}
+
+function renderResults() {
+    const r = globalResults;
+    document.getElementById('res_e_full').innerText = `( ${(r.e_avg * 1e19).toFixed(3)} ± ${(r.final_uc_e * 1e19).toFixed(3)} )`;
+    document.getElementById('res_error').innerHTML = `${r.percentage_error.toFixed(2)}<span style="font-size:1.5rem;">%</span>`;
+
+    let t1 = `<tr><th style="border-right: none;">标号</th><th>U_avg (V)</th><th>t_avg (s)</th><th>电荷量 qᵢ (C)</th><th style="text-align:center;">电子数 n</th></tr>`;
+    r.drops.forEach(d => {
+        t1 += `<tr><td class="td-pad font-mono" style="font-weight:600; color:var(--slate-700); border-right:none;">q ${d.id}</td><td class="td-pad font-mono">${d.U_avg.toFixed(2)}</td><td class="td-pad font-mono">${d.t_avg.toFixed(3)}</td><td class="td-pad font-mono" style="color:var(--blue-700); font-weight:700;">${formatSci(d.q_raw)}</td><td class="td-pad" style="text-align:center; font-weight:700; background:var(--slate-50); font-size:1rem;">${d.n}</td></tr>`;
+    });
+    document.getElementById('table_physical').innerHTML = t1;
+
+    let t2 = `<tr><th style="border-right: none;">标号</th><th>u_c(U)</th><th>u_c(t)</th><th>单次 eᵢ (C)</th><th style="color:var(--indigo-700);">合成 u_c(eᵢ)</th></tr>`;
+    r.drops.forEach(d => {
+        t2 += `<tr><td class="td-pad font-mono" style="font-weight:600; color:var(--slate-700); border-right:none;">Drop ${d.id}</td><td class="td-pad font-mono text-muted">${d.uc_U.toFixed(3)}</td><td class="td-pad font-mono text-muted">${d.uc_t.toFixed(3)}</td><td class="td-pad font-mono" style="font-weight:600;">${formatSci(d.e_measured)}</td><td class="td-pad font-mono" style="color:var(--indigo-700); font-weight:700; background:var(--indigo-50);">${formatSci(d.uc_e)}</td></tr>`;
+    });
+    document.getElementById('table_uncertainty').innerHTML = t2;
+}
+
+// --- 坚如磐石的 SVG 渲染引擎 (ViewBox 技术) ---
+function drawCharts() {
+    if(!globalResults) return;
+    let data = [...globalResults.drops].sort((a, b) => a.q_raw - b.q_raw).map((d, i) => ({
+        index: i + 1, q_raw: d.q_raw, n: d.n, e_meas: d.e_measured, label: `q${i+1}`
+    }));
+
+    tooltipCache = []; // 清空缓存池
+
+    const vW = 800, vH = 450;
+    const padL = 100, padR = 40, padT = 30, padB = 60; // 左边距放大以防止科学计数法遮断
+    const inW = vW - padL - padR;
+    const inH = vH - padT - padB;
+
+    // ----- 图 1: 阶梯图 -----
+    const maxQ = Math.max(...data.map(d => d.q_raw)) * 1.1;
+    const mapX1 = val => padL + (val / (data.length + 1)) * inW;
+    const mapY1 = val => vH - padB - (val / maxQ) * inH;
+
+    let svg1 = `<svg viewBox="0 0 ${vW} ${vH}" preserveAspectRatio="none" class="chart axis">`;
+    // Y Grid
+    for(let i=0; i<=5; i++) {
+        const val = (maxQ / 5) * i;
+        const y = mapY1(val);
+        svg1 += `<line x1="${padL}" y1="${y}" x2="${vW-padR}" y2="${y}" class="grid-line" />`;
+        if(i > 0) svg1 += `<text x="${padL-12}" y="${y+4}" text-anchor="end">${formatSci(val, 2)}</text>`;
+    }
+    svg1 += `<text x="24" y="${vH/2}" transform="rotate(-90 24,${vH/2})" text-anchor="middle" font-weight="700" fill="var(--slate-800)" font-size="14px">绝对电荷量 q (C)</text>`;
+    // X Axis
+    svg1 += `<line x1="${padL}" y1="${vH-padB}" x2="${vW-padR}" y2="${vH-padB}" stroke="var(--slate-300)" stroke-width="1.5" />`;
+    data.forEach(d => {
+        const x = mapX1(d.index);
+        svg1 += `<line x1="${x}" y1="${vH-padB}" x2="${x}" y2="${vH-padB+5}" stroke="var(--slate-300)" stroke-width="1.5" />`;
+        svg1 += `<text x="${x}" y="${vH-padB+22}" text-anchor="middle">${d.index}</text>`;
+    });
+    svg1 += `<text x="${padL + inW/2}" y="${vH-10}" text-anchor="middle">油滴升序编号 (Drop Index)</text>`;
+    // Ref Lines
+    let uniqueNs = [...new Set(data.map(d => d.n))].sort((a,b)=>a-b);
+    uniqueNs.forEach(n => {
+        const y = mapY1(n * constants.e_theo);
+        svg1 += `<line x1="${padL}" y1="${y}" x2="${vW-padR}" y2="${y}" class="ref-line" />`;
+        svg1 += `<text x="${vW-padR+6}" y="${y+5}" class="ref-text">${n}e₀</text>`;
+    });
+    // Dots
+    data.forEach(d => {
+        const x = mapX1(d.index), y = mapY1(d.q_raw);
+        const tIdx = tooltipCache.length;
+        tooltipCache.push(`
+            <div class="tt-title">数据点: ${d.label}</div>
+            <div class="tt-row"><span class="tt-label">推导电子数</span><span class="tt-val" style="color:var(--green-600);">n = ${d.n}</span></div>
+            <div class="tt-row"><span class="tt-label">绝对电荷量</span><span class="tt-val" style="color:var(--blue-600);">${formatSci(d.q_raw)} C</span></div>
+            <div class="tt-row" style="margin-bottom:0;"><span class="tt-label">单次基本电荷</span><span class="tt-val" style="color:var(--indigo-600);">${formatSci(d.e_meas)} C</span></div>
+        `);
+        svg1 += `<g class="dot-group" onmousemove="showTooltip(event, ${tIdx})" onmouseout="hideTooltip()">
+                    <circle cx="${x}" cy="${y}" r="24" fill="transparent" /> <!-- 大尺寸幽灵外框防止误触 -->
+                    <circle cx="${x}" cy="${y}" r="6" fill="var(--green-400)" stroke="#fff" stroke-width="1.5" class="real-dot"/>
+                    <text x="${x}" y="${y-14}" text-anchor="middle" font-size="12px" font-weight="600" fill="var(--slate-600)">${d.label}</text>
+                 </g>`;
+    });
+    document.getElementById('chart_stairs').innerHTML = svg1 + `</svg>`;
+
+    // ----- 图 2: 线性拟合图 -----
+    const maxN = Math.max(...data.map(d => d.n)) + 1;
+    const mapX2 = val => padL + (val / maxN) * inW;
+    const mapY2 = val => vH - padB - (val / maxQ) * inH;
+
+    let svg2 = `<svg viewBox="0 0 ${vW} ${vH}" preserveAspectRatio="none" class="chart axis">`;
+    // Y Grid
+    for(let i=0; i<=5; i++) {
+        const val = (maxQ / 5) * i;
+        const y = mapY2(val);
+        svg2 += `<line x1="${padL}" y1="${y}" x2="${vW-padR}" y2="${y}" class="grid-line" />`;
+        if(i > 0) svg2 += `<text x="${padL-12}" y="${y+4}" text-anchor="end">${formatSci(val, 2)}</text>`;
+    }
+    svg2 += `<text x="24" y="${vH/2}" transform="rotate(-90 24,${vH/2})" text-anchor="middle" font-weight="700" fill="var(--slate-800)" font-size="14px">宏观电荷量 q (C)</text>`;
+    // X Grid
+    svg2 += `<line x1="${padL}" y1="${vH-padB}" x2="${vW-padR}" y2="${vH-padB}" stroke="var(--slate-300)" stroke-width="1.5" />`;
+    for(let i=0; i<=maxN; i+=1) { // 调整为更密集的底纹网格
+        const x = mapX2(i);
+        if(i % 2 === 0) {
+            svg2 += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${vH-padB+5}" class="grid-line" style="opacity:0.6" />`;
+            svg2 += `<text x="${x}" y="${vH-padB+22}" text-anchor="middle">${i}</text>`;
+        }
+    }
+    svg2 += `<text x="${padL + inW/2}" y="${vH-10}" text-anchor="middle">提取电子数 n</text>`;
+    
+    // 最佳理论拟合实线
+    svg2 += `<line x1="${mapX2(0)}" y1="${mapY2(0)}" x2="${mapX2(maxN)}" y2="${mapY2(maxN * globalResults.e_avg)}" stroke="var(--blue-500)" stroke-width="2" />`;
+    
+    // 实测数据散点
+    data.forEach(d => {
+        const x = mapX2(d.n), y = mapY2(d.q_raw);
+        const tIdx = tooltipCache.length;
+        tooltipCache.push(`
+            <div class="tt-title">电子数 n = ${d.n}</div>
+            <div class="tt-row" style="margin-bottom:0;"><span class="tt-label">实测电荷量</span><span class="tt-val" style="color:var(--red-600);">${formatSci(d.q_raw)} C</span></div>
+        `);
+        svg2 += `<g class="dot-group" onmousemove="showTooltip(event, ${tIdx})" onmouseout="hideTooltip()">
+                    <circle cx="${x}" cy="${y}" r="24" fill="transparent" />
+                    <circle cx="${x}" cy="${y}" r="6" fill="var(--red-500)" stroke="#fff" stroke-width="1.5" class="real-dot"/>
+                 </g>`;
+    });
+    document.getElementById('chart_line').innerHTML = svg2 + `</svg>`;
+}
+
+// --- 动态跟随悬浮框逻辑 ---
+function showTooltip(e, tipIdx) {
+    const tooltip = document.getElementById('tooltip');
+    tooltip.innerHTML = tooltipCache[tipIdx];
+    tooltip.style.display = 'block';
+    
+    // 计算基于屏幕滚动后的绝对位置，向右下方微调保证不遮挡鼠标
+    const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+    const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+    
+    tooltip.style.left = (e.clientX + scrollX + 16) + 'px';
+    tooltip.style.top = (e.clientY + scrollY + 16) + 'px';
+}
+
+function hideTooltip() { 
+    document.getElementById('tooltip').style.display = 'none'; 
+}
+
+// 初始化
+initUI();
+
+// 优化处理由于屏幕强制缩放或者重绘可能引起的微调
+window.addEventListener('resize', () => {
+    if(document.getElementById('tab-visual').classList.contains('active')){
+        drawCharts();
+    }
+});
+</script>
+
+</body>
+</html>
